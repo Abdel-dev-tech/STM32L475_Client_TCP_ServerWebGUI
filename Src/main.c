@@ -26,7 +26,7 @@
 #define SSID     "Freebox-A5CB0C"
 #define PASSWORD "dubitabas8-inpetrate-subtrita-latites7"
 
-uint8_t RemoteIP[] = {192,168,1,110};
+uint8_t RemoteIP[] = {192,168,1,4};
 #define RemotePORT	8002
 
 #define WIFI_WRITE_TIMEOUT 10000
@@ -75,7 +75,8 @@ int main(void)
 {
   uint8_t  MAC_Addr[6];
   uint8_t  IP_Addr[4];
-  uint8_t TxData[] = "STM32 : Hello!\n";
+
+  uint8_t TxData[300] = "";
   int32_t Socket = -1;
   uint16_t Datalen;
   int32_t ret;
@@ -105,23 +106,23 @@ int main(void)
   BSP_COM_Init(COM1, &hDiscoUart);
 #endif /* TERMINAL_USE */
 
-  TERMOUT("****** WIFI Module in TCP Client mode demonstration ****** \n\n");
-  TERMOUT("TCP Client Instructions :\n");
-  TERMOUT("1- Make sure your Phone is connected to the same network that\n");
-  TERMOUT("   you configured using the Configuration Access Point.\n");
-  TERMOUT("2- Create a server by using the android application TCP Server\n");
-  TERMOUT("   with port(8002).\n");
-  TERMOUT("3- Get the Network Name or IP Address of your Android from the step 2.\n\n");
+  TERMOUT("****** WIFI Module in TCP Client mode demonstration ****** \n\r\n");
+  TERMOUT("TCP Client Instructions :\n\r");
+  TERMOUT("1- Make sure your Phone is connected to the same network that\n\r");
+  TERMOUT("   you configured using the Configuration Access Point.\n\r");
+  TERMOUT("2- Create a server by using the android application TCP Server\n\r");
+  TERMOUT("   with port(8002).\n\r");
+  TERMOUT("3- Get the Network Name or IP Address of your Android from the step 2.\n\r\n\r");
 
 
 
   /*Initialize  WIFI module */
   if(WIFI_Init() ==  WIFI_STATUS_OK)
   {
-    TERMOUT("> WIFI Module Initialized.\n");
+    TERMOUT("> WIFI Module Initialized.\n\r");
     if(WIFI_GetMAC_Address(MAC_Addr) == WIFI_STATUS_OK)
     {
-      TERMOUT("> es-wifi module MAC Address : %X:%X:%X:%X:%X:%X\n",
+      TERMOUT("> es-wifi module MAC Address : %X:%X:%X:%X:%X:%X\n\r",
                MAC_Addr[0],
                MAC_Addr[1],
                MAC_Addr[2],
@@ -131,22 +132,22 @@ int main(void)
     }
     else
     {
-      TERMOUT("> ERROR : CANNOT get MAC address\n");
+      TERMOUT("> ERROR : CANNOT get MAC address\n\r");
       BSP_LED_On(LED2);
     }
 
     if( WIFI_Connect(SSID, PASSWORD, WIFI_ECN_WPA2_PSK) == WIFI_STATUS_OK)
     {
-      TERMOUT("> es-wifi module connected \n");
+      TERMOUT("> es-wifi module connected \n\r");
       if(WIFI_GetIP_Address(IP_Addr) == WIFI_STATUS_OK)
       {
-        TERMOUT("> es-wifi module got IP Address : %d.%d.%d.%d\n",
+        TERMOUT("> es-wifi module got IP Address : %d.%d.%d.%d\n\r",
                IP_Addr[0],
                IP_Addr[1],
                IP_Addr[2],
                IP_Addr[3]);
 
-        TERMOUT("> Trying to connect to Server: %d.%d.%d.%d:%d ...\n",
+        TERMOUT("> Trying to connect to Server: %d.%d.%d.%d:%d ...\n\r",
                RemoteIP[0],
                RemoteIP[1],
                RemoteIP[2],
@@ -157,59 +158,108 @@ int main(void)
         {
           if( WIFI_OpenClientConnection(0, WIFI_TCP_PROTOCOL, "TCP_CLIENT", RemoteIP, RemotePORT, 0) == WIFI_STATUS_OK)
           {
-            TERMOUT("> TCP Connection opened successfully.\n");
+            TERMOUT("> TCP Connection opened successfully.\n\r");
             Socket = 0;
             break;
           }
         }
         if(Socket == -1)
         {
-          TERMOUT("> ERROR : Cannot open Connection\n");
+          TERMOUT("> ERROR : Cannot open Connection\n\r");
           BSP_LED_On(LED2);
         }
       }
       else
       {
-        TERMOUT("> ERROR : es-wifi module CANNOT get IP address\n");
+        TERMOUT("> ERROR : es-wifi module CANNOT get IP address\n\r");
         BSP_LED_On(LED2);
       }
     }
     else
     {
-      TERMOUT("> ERROR : es-wifi module NOT connected\n");
+      TERMOUT("> ERROR : es-wifi module NOT connected\n\r");
       BSP_LED_On(LED2);
     }
   }
   else
   {
-    TERMOUT("> ERROR : WIFI Module cannot be initialized.\n");
+    TERMOUT("> ERROR : WIFI Module cannot be initialized.\n\r");
     BSP_LED_On(LED2);
   }
+  /*Temperature sensor*/
+  BSP_TSENSOR_Init();
+  float temp_value = 0; // Measured temperature value
+  char str_tmp[100] = ""; // Formatted message to display the temperature value
 
+  /*Humidity sensor*/
+  BSP_HSENSOR_Init();
+  float hum_value = 0; // Measured temperature value
+  char str_hum[100] = ""; // Formatted message to display the temperature value
+
+  /*Pressure sensor*/
+  BSP_PSENSOR_Init();
+  float pressure_value = 0; // Measured temperature value
+  char str_pressure[100] = ""; // Formatted message to display the temperature value
+
+  TERMOUT("> Temperature sensor is initialized\n\r");
+////////////////////////////////////////Wile loop////////////////////////////////////////
   while(1)
   {
     if(Socket != -1)
     {
-      ret = WIFI_ReceiveData(Socket, RxData, sizeof(RxData)-1, &Datalen, WIFI_READ_TIMEOUT);
-      if(ret == WIFI_STATUS_OK)
-      {
-        if(Datalen > 0)
+    	/*Get the temperature value*/
+    	temp_value = BSP_TSENSOR_ReadTemp();
+		int tmpInt1 = temp_value;
+		float tmpFrac = temp_value - tmpInt1;
+		int tmpInt2 = trunc(tmpFrac * 100);
+		snprintf(str_tmp,100,"%d.%02d&", tmpInt1, tmpInt2);
+
+    	/*Get the Humidity value*/
+		hum_value = BSP_HSENSOR_ReadHumidity();
+		tmpInt1 = hum_value;
+		tmpFrac = hum_value - tmpInt1;
+		tmpInt2 = trunc(tmpFrac * 100);
+		snprintf(str_hum,100,"%d.%02d&", tmpInt1, tmpInt2);
+
+    	/*Get the Pressure value*/
+		pressure_value = BSP_PSENSOR_ReadPressure();
+		tmpInt1 = pressure_value;
+		tmpFrac = pressure_value - tmpInt1;
+		tmpInt2 = trunc(tmpFrac * 100);
+		snprintf(str_pressure,100,"%d.%02d", tmpInt1, tmpInt2);
+
+		/*Build the buffer to send with temperature, humidity ad pressure*/
+		snprintf(TxData,300,"%s%s%s",str_tmp, str_hum,str_pressure);
+
+        ret = WIFI_SendData(Socket, TxData, sizeof(TxData), &Datalen, WIFI_WRITE_TIMEOUT);
+        if (ret != WIFI_STATUS_OK)
         {
-          RxData[Datalen]=0;
-          TERMOUT("Received: %s\n",RxData);
-          ret = WIFI_SendData(Socket, TxData, sizeof(TxData), &Datalen, WIFI_WRITE_TIMEOUT);
-          if (ret != WIFI_STATUS_OK)
-          {
-            TERMOUT("> ERROR : Failed to Send Data, connection closed\n");
-            break;
-          }
+          TERMOUT("> ERROR : Failed to Send Data, connection closed\n\r");
+          break;
         }
-      }
-      else
-      {
-        TERMOUT("> ERROR : Failed to Receive Data, connection closed\n");
-        break;
-      }
+
+        HAL_Delay(3000);
+
+//      ret = WIFI_ReceiveData(Socket, RxData, sizeof(RxData)-1, &Datalen, WIFI_READ_TIMEOUT);
+//      if(ret == WIFI_STATUS_OK)
+//      {
+//        if(Datalen > 0)
+//        {
+//          RxData[Datalen]=0;
+//          TERMOUT("Received: %s\n\r",RxData);
+//          ret = WIFI_SendData(Socket, TxData, sizeof(TxData), &Datalen, WIFI_WRITE_TIMEOUT);
+//          if (ret != WIFI_STATUS_OK)
+//          {
+//            TERMOUT("> ERROR : Failed to Send Data, connection closed\n\r");
+//            break;
+//          }
+//        }
+//      }
+//      else
+//      {
+//        TERMOUT("> ERROR : Failed to Receive Data, connection closed\n\r");
+//        break;
+//      }
     }
   }
 }
@@ -299,7 +349,7 @@ void assert_failed(uint8_t* file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-    ex: TERMOUT("Wrong parameters value: file %s on line %d\r\n", file, line) */
+    ex: TERMOUT("Wrong parameters value: file %s on line %d\r\n\r", file, line) */
   /* USER CODE END 6 */
 
 }

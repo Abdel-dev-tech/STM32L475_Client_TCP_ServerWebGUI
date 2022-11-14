@@ -155,6 +155,7 @@ float HTS221_H_ReadHumidity(uint16_t DeviceAddr)
   *         that contains the configuration setting for the HTS221.
   */
 void HTS221_T_Init(uint16_t DeviceAddr, TSENSOR_InitTypeDef *pInitStruct)
+
 {  
   uint8_t tmp;
   
